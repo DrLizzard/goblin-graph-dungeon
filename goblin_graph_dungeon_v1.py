@@ -1,5 +1,7 @@
-# goblin_graph_dungeon_v1.py
+# goblin_graph_dungeon_v1.py - J.Booysen
 # Terminal hub + graph dungeon + knapsack loot + stone duel ritual
+# This project is shared for educational and learning purposes.
+# Use it, learn from it, and build something cool.
 import json
 import math
 import random
@@ -268,6 +270,18 @@ def event_goblin_ritual():
     left = random.randint(7, 13)
     right = random.randint(7, 13)
 
+    # OPTION 1: make Game 2 fair sometimes by starting on a multiple of 4
+    if mode == "game2" and random.random() < 0.5: # If you want it even more fair, change 0.5 to 0.7 (70% fair starts)
+        total = left + right
+        mod = total % 4
+        if mod != 0:
+            add = 4 - mod  # 1..3
+            # add to a random pile so it doesn't feel patterned
+            if random.random() < 0.5:
+                left += add
+            else:
+                right += add
+
     slow_print(f"Ritual mode: {'Game 1' if mode=='game1' else 'Game 2'}")
     if mode == "game1":
         slow_print("Rules: take (1,0) or (0,1) or (1,1). Last move wins.")
@@ -277,7 +291,6 @@ def event_goblin_ritual():
 
     turn = "goblin"  # like your Tkinter version, goblin starts
 
-    last_goblin = None
     while left + right > 0:
         slow_print(f"\nPiles: Left={left}  Right={right}")
         if mode == "game1":
@@ -285,9 +298,16 @@ def event_goblin_ritual():
         else:
             slow_print(f"Status: Total={left+right} (mod 4 = {(left+right)%4})")
 
-        if last_goblin:
-            gl, gr = last_goblin
-            slow_print(f"Last Goblin move: took {gl} from left, {gr} from right")
+        # Subtle hint for mathematically lost positions (no spoilers)
+        if mode == "game2" and turn == "you" and (left + right) % 4 == 0:
+            slow_print("The stones vibrate softly, settling into an uneasy stillness...")
+            # alternate hints:
+            # More mystical
+            # slow_print("A low hum echoes through the circle, as if the ritual has already decided...")
+            # More goblin-flavored
+            # slow_print("The goblin’s grin widens. The stones no longer feel obedient.")
+            # More mathematical
+            # slow_print("The pattern of stones feels rigid, resistant to change.")
 
         if turn == "goblin":
             pause(0.4)
@@ -298,7 +318,7 @@ def event_goblin_ritual():
 
             left -= l_take
             right -= r_take
-            last_goblin = (l_take, r_take)
+            slow_print(f"Goblin takes: {l_take} from left, {r_take} from right")
 
             if left + right == 0:
                 slow_print("\n😈 The Goblin wins the ritual and does a tiny victory dance.")
