@@ -100,7 +100,7 @@ def load_game(filename=SAVEFILE):
 # Combat (number battle vibe)
 # ----------------------------
 def number_battle(difficulty: int):
-    divisor = {1: 30, 2: 50, 3: 100}.get(difficulty, 30)
+    divisor = {1: 30, 2: 50}.get(difficulty, 30) # {1: 30, 2: 50, 3: 100}
     secret = random.randint(1, divisor)
     attempts = 0
 
@@ -580,7 +580,7 @@ def show_map(state):
 def enter_dungeon(state):
     # generate dungeon if none
     if "dungeon" not in state or not state["dungeon"]:
-        state["dungeon"] = generate_dungeon(num_rooms=30, extra_edges=10) # larger dungeon, can be adjusted
+        state["dungeon"] = generate_dungeon() # generate_dungeon(num_rooms=30, extra_edges=10)  larger dungeon, can be adjusted
         state["dungeon"]["trail"] = [state["dungeon"]["current"]]
         slow_print("The dungeon shifts into place beneath the village...\n")
 
