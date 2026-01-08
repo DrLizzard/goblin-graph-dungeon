@@ -412,7 +412,7 @@ def dungeon_shift(d):
             if b not in adj[a]:
                 adj[a].append(b)
                 adj[b].append(a)
-                return f"A hidden tunnel opens between {a} and {b}."
+                return f"A hidden tunnel opens between room {a} and room {b}."
         return "You hear stone shift, but nothing new is revealed."
 
     # ---------- COLLAPSE A TUNNEL (SAFE) ----------
@@ -426,7 +426,7 @@ def dungeon_shift(d):
 
         # check reachability
         if is_reachable(adj, cur, exit_room):
-            return f"The ground collapses! A passage between {u} and {v} is gone."
+            return f"The ground collapses! A passage between room {u} and room {v} is gone."
 
         # rollback if unfair
         adj[u].append(v)
@@ -540,13 +540,52 @@ def is_reachable(adj, start, target):
 
     return False
 
+def bfs_within(adj, start, max_depth=2):
+    dist = {start: 0}
+    q = deque([start])
+    while q:
+        v = q.popleft()
+        if dist[v] == max_depth:
+            continue
+        for u in adj[v]:
+            if u not in dist:
+                dist[u] = dist[v] + 1
+                q.append(u)
+    return dist
+
+def show_map(state):
+    d = state["dungeon"]
+    rid = d["current"]
+    adj = d["adj"]
+
+    dist = bfs_within(adj, rid, max_depth=2)
+    one = sorted(k for k, v in dist.items() if v == 1)
+    two = sorted(k for k, v in dist.items() if v == 2)
+
+    divider()
+    slow_print("Map (local)")
+    slow_print(f"You are in room {rid}")
+    slow_print("1-step: " + (", ".join(map(str, one)) if one else "none"))
+    slow_print("2-step: " + (", ".join(map(str, two)) if two else "none"))
+
+    if "exit" in d:
+        slow_print(f"Exit Gate: room {d['exit']}")
+
+    slow_print("\nPress Enter to continue...")
+    input()
+
+# ----------------------------
+# Dungeon exploration
+# ----------------------------
 def enter_dungeon(state):
     # generate dungeon if none
     if "dungeon" not in state or not state["dungeon"]:
-        state["dungeon"] = generate_dungeon()
+        state["dungeon"] = generate_dungeon(num_rooms=30, extra_edges=10) # larger dungeon, can be adjusted
+        state["dungeon"]["trail"] = [state["dungeon"]["current"]]
         slow_print("The dungeon shifts into place beneath the village...\n")
 
     d = state["dungeon"]
+    d.setdefault("trail", [d["current"]])
 
     while True:
         if player["health"] <= 0:
@@ -558,8 +597,20 @@ def enter_dungeon(state):
         room = d["rooms"][str(room_id)] if isinstance(next(iter(d["rooms"].keys())), str) else d["rooms"][room_id]
 
         divider()
-        slow_print(f"You are in: {room['name']}")
+        rid = state["dungeon"]["current"]
+        slow_print(f"You are in: {room['name']}  [Room {rid}]")
         slow_print(room["desc"])
+
+        # Show connected rooms (graph neighbors)
+        adj = state["dungeon"]["adj"]
+        neighbors = adj[rid]
+
+        if neighbors:
+            exits = ", ".join(str(n) for n in sorted(neighbors))
+            slow_print(f"Exits: {exits}")
+        else:
+            slow_print("Exits: none (this room is isolated)")
+
 
         # run event once per room unless exit
         if room["type"] != "exit" and not room.get("cleared", False):
@@ -613,8 +664,23 @@ def enter_dungeon(state):
             print(f"{i}. [{cleared}] {nb_room['name']} ({tag})")
 
         print("\nA) Return to Village")
+        print("M) Show Map")
+        print("P) Show Breadcrumbs")
         print("S) Save")
         choice = input("> ").strip().lower()
+
+        if choice == "p":
+            divider()
+            trail = state["dungeon"].get("trail", [])
+            if len(trail) <= 1:
+                slow_print("Breadcrumbs: (you just arrived here)")
+            else:
+                slow_print("Breadcrumbs: " + " \u2192 ".join(map(str, trail)))
+            continue
+
+        if choice == "m": 
+            show_map(state)
+            continue
 
         if choice == "a":
             slow_print("You retreat to the surface... for now.")
@@ -628,7 +694,19 @@ def enter_dungeon(state):
         if choice.isdigit():
             idx = int(choice) - 1
             if 0 <= idx < len(neighbors):
-                d["current"] = neighbors[idx]
+                next_room = neighbors[idx]
+
+                d = state["dungeon"]
+                d["current"] = next_room
+
+                # --- Breadcrumbs ---
+                trail = d.setdefault("trail", [])
+                if not trail or trail[-1] != next_room:
+                    trail.append(next_room)
+                    # keep last 12 rooms
+                    if len(trail) > 12:
+                        del trail[:-12]
+
             else:
                 slow_print("Nope.")
         else:
@@ -728,6 +806,12 @@ def village(state):
         divider()
         slow_print("You stroll through the small village. Traders call out from stalls.")
         print(SHOP_ART)
+
+        # show dungeon position if any
+        if state.get("dungeon"):
+            rid = state["dungeon"]["current"]
+            slow_print(f"[You last ventured as far as room {rid} in the dungeon]")
+
         print("1) Visit the Shop")
         print("2) Visit the Noticeboard")
         print("3) Enter the Dungeon")
