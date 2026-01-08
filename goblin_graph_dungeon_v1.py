@@ -270,6 +270,14 @@ def goblin_move_game2(left, right):
                 return (l, r)
     return random.choice(moves)
 
+def make_even_in_range(x, lo=7, hi=13):
+    if x % 2 == 0:
+        return x
+    # x is odd: try +1 if it stays in range, else -1
+    if x < hi:
+        return x + 1
+    return x - 1
+
 def event_goblin_ritual():
     divider()
     slow_print("A Goblin Shaman draws a circle in ash.")
@@ -282,8 +290,8 @@ def event_goblin_ritual():
 
     # OPTION 0: make Game 1 fair sometimes by forcing (even, even)
     if mode == "game1" and random.random() < 0.6: # If you want it even more fair, change 0.5 to 0.7 (70% fair starts)
-        if left % 2: left += 1
-        if right % 2: right += 1
+        left = make_even_in_range(left, 7, 13)
+        right = make_even_in_range(right, 7, 13)
 
     # OPTION 1: make Game 2 fair sometimes by starting on a multiple of 4
     if mode == "game2" and random.random() < 0.5: # If you want it even more fair, change 0.5 to 0.7 (70% fair starts)
@@ -318,7 +326,7 @@ def event_goblin_ritual():
             slow_print("The stones lock into a stubborn rhythm... the goblin seems confident.")
 
         # Subtle hint for mathematically lost positions (no spoilers) game2
-        if mode == "game2" and turn == "you" and (left + right) % 4 == 0:
+        elif mode == "game2" and turn == "you" and (left + right) % 4 == 0:
             slow_print("The stones vibrate softly, settling into an uneasy stillness...")
             # alternate hints:
             # More mystical
