@@ -226,20 +226,30 @@ def event_loot_cache():
 # Stone Duel ritual (terminal port of your rules + goblin strategy)
 # ----------------------------
 def goblin_move_game1(left, right):
-    # try to make both piles even when possible (parity strategy)
-    moves = []
-    if left >= 1: moves.append((1, 0))
-    if right >= 1: moves.append((0, 1))
-    if left >= 1 and right >= 1: moves.append((1, 1))
+    # Parity strategy:
+    # If possible, make the resulting position (even, even) for the player.
 
-    if left % 2 == 1 and right % 2 == 0 and left >= 1:
-        return (1, 0)
-    if left % 2 == 0 and right % 2 == 1 and right >= 1:
+    # If one pile is empty, only one legal move exists.
+    if left == 0 and right == 0:
+        return (0, 0)  # shouldn't be called here, but safe
+    if left == 0:
         return (0, 1)
-    if left % 2 == 1 and right % 2 == 1 and left >= 1 and right >= 1:
+    if right == 0:
+        return (1, 0)
+
+    # If exactly one pile is odd, take from that pile to make it even.
+    if left % 2 == 1 and right % 2 == 0:
+        return (1, 0)
+    if left % 2 == 0 and right % 2 == 1:
+        return (0, 1)
+
+    # If both are odd, take from both to make both even.
+    if left % 2 == 1 and right % 2 == 1:
         return (1, 1)
 
-    return random.choice(moves)
+    # Otherwise both are even already (goblin is in a losing position),
+    # so any move is "bad" – pick randomly.
+    return random.choice([(1, 0), (0, 1), (1, 1)])
 
 def goblin_move_game2(left, right):
     # mod-4 strategy: remove total stones == (left+right) % 4 when possible, else random legal
@@ -270,6 +280,11 @@ def event_goblin_ritual():
     left = random.randint(7, 13)
     right = random.randint(7, 13)
 
+    # OPTION 0: make Game 1 fair sometimes by forcing (even, even)
+    if mode == "game1" and random.random() < 0.6: # If you want it even more fair, change 0.5 to 0.7 (70% fair starts)
+        if left % 2: left += 1
+        if right % 2: right += 1
+
     # OPTION 1: make Game 2 fair sometimes by starting on a multiple of 4
     if mode == "game2" and random.random() < 0.5: # If you want it even more fair, change 0.5 to 0.7 (70% fair starts)
         total = left + right
@@ -298,7 +313,11 @@ def event_goblin_ritual():
         else:
             slow_print(f"Status: Total={left+right} (mod 4 = {(left+right)%4})")
 
-        # Subtle hint for mathematically lost positions (no spoilers)
+        # Subtle hint for mathematically lost positions (no spoilers) game1
+        if mode == "game1" and turn == "you" and left % 2 == 0 and right % 2 == 0:
+            slow_print("The stones lock into a stubborn rhythm... the goblin seems confident.")
+
+        # Subtle hint for mathematically lost positions (no spoilers) game2
         if mode == "game2" and turn == "you" and (left + right) % 4 == 0:
             slow_print("The stones vibrate softly, settling into an uneasy stillness...")
             # alternate hints:
